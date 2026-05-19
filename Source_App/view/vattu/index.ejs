@@ -1,0 +1,168 @@
+<%- include('../partials/header') %>
+
+<style>
+    .col-action-border {
+        border-left: 1px solid #dee2e6 !important;
+        width: 150px; 
+    }
+</style>
+
+<div class="container-fluid px-4">
+    <div class="card mb-4 shadow-sm mt-3 border-0">
+        <div class="card-body border">
+            <form id="mainForm" action="/vat-tu/add" method="POST">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Tên hàng hóa</label>
+                        <input type="text" name="ten_hang" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Đơn vị tính</label>
+                        <input type="text" name="don_vi_tinh" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Đơn giá</label>
+                        <input type="number" name="don_gia" class="form-control" min="0">
+                    </div>
+                    
+                    <%/* Ẩn số lượng - Luôn bằng 0 */%>
+                    <input type="hidden" name="so_luong" value="0"> 
+
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Hãng sản xuất</label>
+                        <input type="text" name="hang_san_xuat" class="form-control">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Thông số kỹ thuật</label>
+                        <textarea name="thong_so_ky_thuat" id="thong_so_ky_thuat" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Định mức kinh tế kỹ thuật</label><br>
+                        <input style="width: 22px; height: 22px;" type="checkbox" name="is_dmktkt" id="is_dmktkt" value="1" class="custom-check">
+                    </div>
+                    <div class="col-12 mt-3 text-start">
+                        <button type="submit" class="btn btn-primary px-4 me-2">Thêm mới</button>
+                        <button type="reset" class="btn btn-outline-danger px-4">Xóa tất cả</button>
+                        <a href="/vat-tu/export-template" class="btn btn-success px-4">
+                            <i class="fa fa-file-excel"></i> Xuất file mẫu cho GV
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm p-3 border-0">
+        <div class="table-responsive border">
+            <table id="tableVatTu" class="table table-bordered bg-white align-middle text-center mb-0">
+                <thead class="table-danger text-white">
+                    <tr>
+                        <th>Tên hàng hóa</th>
+                        <th>ĐVT</th>
+                        <th>SL tồn</th>
+                        <th>Đơn giá</th>
+                        <th>Thông số</th>
+                        <th>Hãng sản xuất</th>
+                        <th style="width: 80px;">ĐMKTKT</th>
+                        <th class="col-action-border">Chức năng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% data.forEach(item => { %>
+                    <tr class="row-selectable" 
+                        data-ten="<%= item.ten_hang %>"
+                        data-dvt="<%= item.don_vi_tinh %>"
+                        data-gia="<%= Number(item.don_gia) %>"
+                        data-hang="<%= item.hang_san_xuat %>"
+                        data-tskt="<%= item.thong_so_ky_thuat %>"
+                        data-dm="<%= item.is_dmktkt %>">
+                        
+                        <td class="text-start ps-3 fw-bold"><%= item.ten_hang %></td>
+                        <td><%= item.don_vi_tinh %></td>
+                        <td class="text-danger fw-bold">0</td>
+                        <td><%= Number(item.don_gia).toLocaleString('vi-VN') %></td>
+                        <td class="small text-muted text-start"><%= item.thong_so_ky_thuat %></td>
+                        <td><%= item.hang_san_xuat %></td>
+                        <td>
+                            <input type="checkbox" <%= item.is_dmktkt ? 'checked' : '' %> disabled class="form-check-input">
+                        </td>
+                        <td class="col-action-border">
+                            <div class="d-flex justify-content-center gap-1">
+                                <button class="btn btn-outline-primary btn-sm btn-edit" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editModal" 
+                                        data-id="<%= item.id %>"
+                                        data-val1="<%= item.ten_hang %>" 
+                                        data-val2="<%= item.don_vi_tinh %>" 
+                                        data-val3="<%= Number(item.don_gia) %>" 
+                                        data-val4="<%= item.hang_san_xuat %>" 
+                                        data-val5="<%= item.thong_so_ky_thuat %>" 
+                                        data-val6="<%= item.is_dmktkt %>">
+                                    <i class="fa fa-edit"></i>
+                                </button>
+                                <a href="/vat-tu/delete/<%= item.id %>" class="btn btn-outline-danger btn-sm" onclick="return confirm('Xóa vật tư này?')">
+                                    <i class="fa fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/modal_script', {
+    fields: [
+        {name: 'ten_hang', label: 'Tên hàng hóa', id: 'val1'},
+        {name: 'don_vi_tinh', label: 'Đơn vị tính', id: 'val2'},
+        {name: 'don_gia', label: 'Đơn giá', id: 'val3'},
+        {name: 'hang_san_xuat', label: 'Hãng sản xuất', id: 'val4'},
+        {name: 'thong_so_ky_thuat', label: 'Thông số kỹ thuật', id: 'val5', type: 'textarea'},
+        {name: 'is_dmktkt', label: 'Định mức KT kỹ thuật', id: 'val6', type: 'checkbox'}
+    ]
+}) %>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // 1. Khởi tạo DataTable
+    if (!$.fn.DataTable.isDataTable('#tableVatTu')) {
+        $('#tableVatTu').DataTable({
+            "pageLength": 10,
+            "lengthChange": true,
+            "language": {
+                "search": "Tìm kiếm:",
+                "paginate": { "next": "Sau", "previous": "Trước" },
+                "emptyTable": "Không có vật tư nào"
+            }
+        });
+    }
+
+    // 2. Click dòng table để đưa dữ liệu lên Form Thêm mới
+    $('#tableVatTu tbody').on('click', 'tr', function(e) {
+        // Nếu click trúng nút Sửa/Xóa thì bỏ qua
+        if ($(e.target).closest('button, a, input[type="checkbox"]').length) return;
+
+        const d = $(this).data();
+        const form = document.getElementById('mainForm');
+
+        form.querySelector('[name="ten_hang"]').value = d.ten || '';
+        form.querySelector('[name="don_vi_tinh"]').value = d.dvt || '';
+        form.querySelector('[name="don_gia"]').value = d.gia || 0;
+        form.querySelector('[name="hang_san_xuat"]').value = d.hang || '';
+        form.querySelector('[name="thong_so_ky_thuat"]').value = d.tskt || '';
+        
+        const isChecked = (d.dm == 1 || d.dm == "1" || d.dm == true || d.dm == "true");
+        form.querySelector('[name="is_dmktkt"]').checked = isChecked;
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+});
+</script>
+
+<%- include('../partials/footer') %>

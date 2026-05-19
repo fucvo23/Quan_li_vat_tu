@@ -1,0 +1,393 @@
+<%- include('../partials/header') %>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+    .col-action-border {
+        border-left: 1px solid #dee2e6 !important;
+        width: 200px;
+    }
+    .swal-error-list {
+        text-align: left;
+        max-height: 300px;
+        overflow-y: auto;
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        border: 1px solid #eee;
+    }
+    .swal-error-list ul {
+        padding-left: 20px;
+        margin-bottom: 0;
+    }
+    .swal-error-list li {
+        color: #d33;
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+    }
+</style>
+
+<div class="container-fluid px-4">
+    <div class="card mb-4 shadow-sm mt-3">
+        <div class="card-body">
+            <form id="mainForm" action="/phan-cong-giao-vien/add" method="POST">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Năm học - Học kỳ</label>
+                        <select name="nam_hoc_id" id="selectNamHoc" class="form-select" required>
+                            <option value="">-- Chọn Học kỳ --</option>
+                            <% namHocList.forEach(nh => { %>
+                                <option value="<%= nh.id %>"><%= nh.nam_hoc %> - <%= nh.hoc_ky %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Lớp</label>
+                        <select name="lop_hoc_id" id="selectLopHoc" class="form-select" required disabled>
+                            <option value="">-- Chọn Học kỳ trước --</option>
+                            <% lopHocList.forEach(l => { %>
+                                <option value="<%= l.id %>" data-namhoc="<%= l.nam_hoc_id %>" style="display: none;">
+                                    <%= l.ten_lop %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Giảng viên</label>
+                        <select name="giang_vien_id" class="form-select" required>
+                            <option value="">-- Chọn giảng viên --</option>
+                            <% giangVienList.forEach(gv => { %>
+                                <option value="<%= gv.id %>"><%= gv.ho_ten %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Môn học</label>
+                        <select name="mon_hoc_id" class="form-select" required>
+                            <option value="">-- Chọn môn học --</option>
+                            <% monHocList.forEach(m => { %>
+                                <option value="<%= m.id %>"><%= m.ten_mon_hoc %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div class="col-12 mt-3 text-start d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="fa-solid fa-plus"></i> Thêm
+                        </button>
+                        
+                        <input type="file" id="importExcel" class="d-none" accept=".xlsx, .xls">
+                        <button type="button" onclick="document.getElementById('importExcel').click()" class="btn btn-success px-4">
+                            <i class="fa-solid fa-file-excel me-2"></i>Nhập từ Excel
+                        </button>
+
+                        <button type="reset" id="btnReset" class="btn btn-outline-secondary px-3">
+                            <i class="fa-solid fa-arrows-rotate"></i> Làm mới ô nhập
+                        </button>
+
+                        <button type="button" id="btnDeleteSemester" class="btn btn-outline-danger px-3">
+                            <i class="fa-solid fa-trash-can"></i> Xóa phân công học kỳ này
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm p-3">
+        <table id="tablePhanCong" class="table table-bordered align-middle text-center">
+            <thead class="table-header-custom text-center table-danger text-white">
+                <tr>
+                    <th>Giáo viên</th>
+                    <th>Lớp</th>
+                    <th>Môn học</th>
+                    <th>Năm học - Học kỳ</th>
+                    <th class="col-action-border">Chức năng</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% data.forEach(item => { %>
+                <tr class="row-selectable" 
+                    data-gv="<%= item.giang_vien_id %>" 
+                    data-lop="<%= item.lop_hoc_id %>"
+                    data-mon="<%= item.mon_hoc_id %>" 
+                    data-nh="<%= item.nam_hoc_id %>">
+                    <td class="fw-bold"><%= item.ho_ten %></td>
+                    <td><%= item.ten_lop %></td>
+                    <td class="text-start ps-3"><%= item.ten_mon_hoc %></td>
+                    <td><%= item.nam_hoc %> - <%= item.hoc_ky %></td>
+                    <td class="col-action-border">
+                        <div class="d-flex justify-content-center gap-1">
+                            <button class="btn btn-outline-primary btn-sm btn-edit" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#editModal"
+                                    data-id="<%= item.id %>"
+                                    data-val1="<%= item.giang_vien_id %>"
+                                    data-val2="<%= item.lop_hoc_id %>"
+                                    data-val3="<%= item.mon_hoc_id %>"
+                                    data-val4="<%= item.nam_hoc_id %>">
+                                <i class="fa fa-edit"></i> 
+                            </button>
+                            <a href="/phan-cong-giao-vien/delete/<%= item.id %>" class="btn btn-outline-danger btn-sm" onclick="return confirm('Xóa phân công này?')">
+                                <i class="fa fa-trash"></i> 
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<%- include('../partials/modal_script', {
+    fields: [
+        { name: 'giang_vien_id', label: 'Giảng viên', id: 'val1', type: 'select', options: giangVienList.map(gv => ({value: gv.id, text: gv.ho_ten})) },
+        { name: 'lop_hoc_id', label: 'Lớp học', id: 'val2', type: 'select', options: lopHocList.map(l => ({value: l.id, text: l.ten_lop})) },
+        { name: 'mon_hoc_id', label: 'Môn học', id: 'val3', type: 'select', options: monHocList.map(m => ({value: m.id, text: m.ten_mon_hoc})) },
+        { name: 'nam_hoc_id', label: 'Học kỳ / Năm học', id: 'val4', type: 'select', options: namHocList.map(nh => ({value: nh.id, text: nh.hoc_ky + ' / ' + nh.nam_hoc})) }
+    ]
+}) %>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    const table = $('#tablePhanCong').DataTable({
+        "pageLength": 10,
+        "language": {
+            "search": "Tìm kiếm nhanh:",
+            "emptyTable": "Chưa có dữ liệu phân công cho học kỳ này"
+        }
+    });
+
+    const selectNamHoc = document.getElementById('selectNamHoc');
+    const selectLopHoc = document.getElementById('selectLopHoc');
+    const allLopOptions = Array.from(selectLopHoc.options);
+
+    // --- LOGIC GHI NHỚ BỘ LỌC ---
+    const savedNamHocId = localStorage.getItem('lastSelectedNamHoc');
+    if (savedNamHocId) {
+        selectNamHoc.value = savedNamHocId;
+        filterLopHoc(savedNamHocId);
+        table.draw();
+    }
+
+    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+        const selectedId = $('#selectNamHoc').val();
+        const rowNamHocId = $(table.row(dataIndex).node()).attr('data-nh');
+        return !selectedId || selectedId == rowNamHocId;
+    });
+
+    selectNamHoc.addEventListener('change', function() {
+        localStorage.setItem('lastSelectedNamHoc', this.value);
+        filterLopHoc(this.value);
+        table.draw(); 
+    });
+
+    function filterLopHoc(selectedNamHocId, targetValue = "") {
+        if (!selectedNamHocId) {
+            selectLopHoc.disabled = true;
+            selectLopHoc.value = "";
+            return;
+        }
+        selectLopHoc.disabled = false;
+        allLopOptions.forEach(option => {
+            const lopNamHocId = option.getAttribute('data-namhoc');
+            option.style.display = (option.value === "" || lopNamHocId == selectedNamHocId) ? 'block' : 'none';
+        });
+        selectLopHoc.value = targetValue;
+    }
+
+    // --- LOGIC IMPORT EXCEL THÔNG MINH ---
+    $('#importExcel').on('change', function(e) {
+        const file = e.target.files[0];
+        const namHocId = $('#selectNamHoc').val();
+
+        if (!namHocId) {
+            Swal.fire('Chú ý', 'Vui lòng chọn Năm học - Học kỳ trước khi nhập Excel!', 'warning');
+            $(this).val('');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                // 1. TỪ ĐIỂN TỪ KHÓA THÔNG MINH
+                const keywords = {
+                    gv: ["giảng viên", "giang vien", "tên gv", "gv", "họ tên", "teacher"],
+                    mon: ["môn học", "mon hoc", "tên môn", "môn", "subject"],
+                    lop: ["lớp", "lop", "tên lớp", "class"]
+                };
+
+                let colIdx = { gv: -1, mon: -1, lop: -1 };
+                let startRow = 0;
+
+                // 2. DÒ TÌM VỊ TRÍ CỘT TRONG 20 DÒNG ĐẦU TIÊN
+                for (let r = 0; r < Math.min(jsonData.length, 20); r++) {
+                    const row = jsonData[r];
+                    if (!row || row.length === 0) continue;
+
+                    for (let c = 0; c < row.length; c++) {
+                        const cellVal = String(row[c] || "").toLowerCase().trim();
+                        if (!cellVal) continue;
+
+                        for (let key in keywords) {
+                            if (keywords[key].some(k => cellVal.includes(k)) && colIdx[key] === -1) {
+                                colIdx[key] = c;
+                            }
+                        }
+                    }
+                    // Nếu tìm thấy cả 3 cột thì dừng dò tìm tiêu đề
+                    if (colIdx.gv !== -1 && colIdx.mon !== -1 && colIdx.lop !== -1) {
+                        startRow = r + 1; 
+                        break;
+                    }
+                }
+
+                if (colIdx.gv === -1 || colIdx.mon === -1 || colIdx.lop === -1) {
+                    Swal.fire('Lỗi', 'Không tìm thấy đủ các cột Giảng viên, Môn học hoặc Lớp! Hãy kiểm tra tiêu đề file.', 'error');
+                    return;
+                }
+
+                // 3. DUYỆT DỮ LIỆU VÀ XỬ LÝ GỘP Ô (MERGED CELLS)
+                let phanCongData = [];
+                let lastGiangVien = "";
+
+                for (let i = startRow; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    if (!row || row.length === 0) continue;
+
+                    let gvRaw = row[colIdx.gv] ? String(row[colIdx.gv]).trim() : "";
+                    let monRaw = row[colIdx.mon] ? String(row[colIdx.mon]).trim() : "";
+                    let lopRaw = row[colIdx.lop] ? String(row[colIdx.lop]).trim() : "";
+
+                    // Cập nhật tên giảng viên nếu dòng này có tên mới
+                    if (gvRaw !== "") {
+                        // Bỏ qua nếu dòng này chính là dòng tiêu đề lặp lại
+                        if (keywords.gv.some(k => gvRaw.toLowerCase().includes(k))) continue;
+                        lastGiangVien = gvRaw;
+                    }
+
+                    if (monRaw && lopRaw && lastGiangVien) {
+                        // Chuẩn hóa định dạng lớp (Ví dụ: 22CDTH1)
+                        let lopDinhDang = lopRaw.replace(/(\d)\s*([A-Za-z])/g, '$1 $2').trim();
+                        
+                        phanCongData.push({ 
+                            ten_gv: lastGiangVien, 
+                            ten_mon: monRaw, 
+                            ten_lop: lopDinhDang, 
+                            nam_hoc_id: namHocId 
+                        });
+                    }
+                }
+
+                if (phanCongData.length === 0) {
+                    Swal.fire('Lỗi', 'Không tìm thấy dữ liệu phân công hợp lệ!', 'error');
+                    return;
+                }
+
+                // 4. XÁC NHẬN VÀ GỬI LÊN SERVER
+                Swal.fire({
+                    title: 'Xác nhận nhập liệu',
+                    text: `Tìm thấy ${phanCongData.length} phân công. Bạn có muốn nhập vào hệ thống?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Đồng ý',
+                    cancelButtonText: 'Hủy'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire({ title: 'Đang lưu...', didOpen: () => { Swal.showLoading(); } });
+                        
+                        fetch('/phan-cong-giao-vien/import-excel', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ data: phanCongData })
+                        })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (res.errors && res.errors.length > 0) {
+                                let errorHtml = `<div style="text-align: left; max-height: 300px; overflow-y: auto;">
+                                                    <p>Thành công: <b class="text-success">${res.successCount}</b></p>
+                                                    <p>Lỗi/Bỏ qua: <b class="text-danger">${res.errors.length}</b></p>
+                                                    <ul class="small">${res.errors.map(err => `<li>${err}</li>`).join('')}</ul>
+                                                 </div>`;
+                                Swal.fire({ title: 'Kết quả Import', html: errorHtml, icon: 'warning' }).then(() => location.reload());
+                            } else {
+                                Swal.fire('Thành công', `Đã nhập ${res.successCount} phân công!`, 'success').then(() => location.reload());
+                            }
+                        });
+                    }
+                });
+            } catch (err) { 
+                console.error(err);
+                Swal.fire('Lỗi', 'Không thể xử lý file Excel!', 'error'); 
+            }
+            $('#importExcel').val('');
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // --- CÁC SỰ KIỆN KHÁC (GIỮ NGUYÊN) ---
+    $('#tablePhanCong tbody').on('click', 'tr', function(e) {
+        if ($(e.target).closest('button, a').length) return;
+        const d = $(this).data();
+        $('#selectNamHoc').val(d.nh).trigger('change');
+        filterLopHoc(d.nh, d.lop);
+        document.getElementById('mainForm').querySelector('[name="giang_vien_id"]').value = d.gv;
+        document.getElementById('mainForm').querySelector('[name="mon_hoc_id"]').value = d.mon;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    $('#btnDeleteSemester').click(function() {
+        const namHocId = $('#selectNamHoc').val();
+        const tenHocKy = $("#selectNamHoc option:selected").text();
+        if (!namHocId) return Swal.fire('Thông báo', 'Vui lòng chọn Học kỳ!', 'info');
+
+        Swal.fire({
+            title: 'Xác nhận xóa sạch?',
+            html: `Xóa toàn bộ phân công của <b class="text-danger">${tenHocKy}</b>?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Xóa sạch',
+            cancelButtonText: 'Hủy'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch('/phan-cong-giao-vien/delete-by-semester', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nam_hoc_id: namHocId })
+                }).then(() => location.reload());
+            }
+        });
+    });
+
+    $('#btnReset').click(function() {
+        const form = $('#mainForm')[0]; 
+        if (form) form.reset();
+        setTimeout(() => {
+            const lastNH = localStorage.getItem('lastSelectedNamHoc');
+            if (lastNH) {
+                $('#selectNamHoc').val(lastNH);
+                $('#selectLopHoc').prop('disabled', false);
+            } else {
+                $('#selectLopHoc').val('').prop('disabled', true);
+            }
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã làm mới ô nhập', showConfirmButton: false, timer: 1500 });
+        }, 10);
+    });
+});
+</script>
+
+<%- include('../partials/footer') %>

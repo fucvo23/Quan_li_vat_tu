@@ -1,0 +1,305 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid px-4">
+    <div class="card mb-4 shadow-sm mt-3 border-0">
+        <div class="card-body bg-light border rounded">
+            <form id="mainForm">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold small">Năm học - Học kỳ</label>
+                        <select name="nam_hoc_id" id="filterNH" class="form-select" required>
+                            <option value="">-- Chọn học kỳ --</option>
+                            <% namHocList.forEach(nh => { %>
+                                <option value="<%= nh.id %>"><%= nh.nam_hoc %> - <%= nh.hoc_ky %> </option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small">Tên lớp</label>
+                        <input type="text" name="ten_lop" class="form-control" required placeholder="VD: 25.1 CNKTCK1">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small">Sĩ số</label>
+                        <input type="number" name="si_so" class="form-control" min="0" value="0">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small">Học phí</label>
+                        <input type="number" name="hoc_phi" id="inputHocPhi" class="form-control" min="0" value="0">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small">Tỷ lệ chi vật tư (%)</label>
+                        <input type="number" step="any" name="ty_le_chi_vat_tu" id="inputTyLe" class="form-control" min="0" value="0">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small">Tiền khoán vật tư</label>
+                        <input type="number" name="tien_khoan_vat_tu" id="inputKhoan" class="form-control" min="0" value="0">
+                    </div>
+
+                    <div class="col-12 mt-4 d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-primary px-4 fw-bold">Thêm mới</button>
+                        
+                        <button type="button" id="btnImportExcel" class="btn btn-success fw-bold">
+                            <i class="fa-solid fa-file-excel me-1"></i>Nhập từ Excel
+                        </button>
+
+                        <button type="button" id="btnReset" class="btn btn-outline-secondary">
+                            Làm mới ô nhập
+                        </button>
+
+                        <button type="button" id="btnDeleteFilter" class="btn btn-outline-danger">
+                            <i class="fa-solid fa-trash-can me-1"></i>Xóa dữ liệu đang lọc
+                        </button>
+                        
+                        <input type="file" id="excelFile" hidden accept=".xlsx, .xls">
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm p-3 border-0">
+        <div class="table-responsive">
+            <table id="tableLopHoc" class="table table-bordered align-middle text-center">
+                <thead class="table-danger">
+                    <tr>
+                        <th>Tên lớp</th>
+                        <th>Năm - Học kỳ</th>
+                        <th>Sĩ số</th>
+                        <th>Học phí</th>
+                        <th>Tỷ lệ %</th>
+                        <th>Tiền khoán</th>
+                        <th>Chức năng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% data.forEach(item => { %>
+                        <tr class="row-selectable" data-nh="<%= item.nam_hoc_id %>">
+                            <td><%= item.ten_lop %></td>
+                            <td><%= item.nam_hoc %> - <%= item.hoc_ky %></td>
+                            <td><%= item.si_so %></td>
+                            <td><%= Number(item.hoc_phi).toLocaleString('vi-VN') %></td>
+                            <td><%= item.ty_le_chi_vat_tu %>%</td>
+                            <td><%= Number(item.tien_khoan_vat_tu).toLocaleString('vi-VN') %></td>
+                            <td>
+                                <div class="d-flex justify-content-center gap-1">
+                                    <button class="btn btn-outline-primary btn-sm btn-edit" 
+                                        data-id="<%= item.id %>"
+                                        data-ten="<%= item.ten_lop %>"
+                                        data-nh="<%= item.nam_hoc_id %>"
+                                        data-siso="<%= item.si_so %>"
+                                        data-hocphi="<%= item.hoc_phi %>"
+                                        data-tyle="<%= item.ty_le_chi_vat_tu %>"
+                                        data-khoan="<%= item.tien_khoan_vat_tu %>">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm btn-delete-single" data-id="<%= item.id %>">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+$(document).ready(function() {
+    // 1. KHỞI TẠO DATATABLE
+    const table = $('#tableLopHoc').DataTable({
+        pageLength: 10,
+        language: { search: "Tìm nhanh:", emptyTable: "Không có dữ liệu cho học kỳ này" }
+    });
+
+    // 2. RÀNG BUỘC KHOÁN VS HỌC PHÍ (Tự động khóa ô)
+    $('#inputKhoan').on('input', function() {
+        if (parseFloat($(this).val()) > 0) {
+            $('#inputHocPhi, #inputTyLe').val(0).prop('readonly', true).addClass('bg-light');
+        } else {
+            $('#inputHocPhi, #inputTyLe').prop('readonly', false).removeClass('bg-light');
+        }
+    });
+
+    $('#inputHocPhi, #inputTyLe').on('input', function() {
+        if (parseFloat($(this).val()) > 0) {
+            $('#inputKhoan').val(0).prop('readonly', true).addClass('bg-light');
+        } else {
+            $('#inputKhoan').prop('readonly', false).removeClass('bg-light');
+        }
+    });
+
+    // 3. BỘ LỌC & GIỮ TRẠNG THÁI (Session)
+    $('#filterNH').on('change', function() {
+        sessionStorage.setItem('filter_lophoc_nh', this.value);
+        table.draw();
+    });
+
+    $.fn.dataTable.ext.search.push((settings, data, dataIndex) => {
+        const selectedNH = $('#filterNH').val();
+        const rowNH = $(table.row(dataIndex).node()).attr('data-nh');
+        return selectedNH === "" || rowNH === selectedNH;
+    });
+
+    const savedNH = sessionStorage.getItem('filter_lophoc_nh');
+    if (savedNH) { $('#filterNH').val(savedNH).trigger('change'); }
+
+    // 4. LÀM MỚI Ô NHẬP
+    $('#btnReset').click(function() {
+        $('#mainForm')[0].reset();
+        $('#inputKhoan, #inputHocPhi, #inputTyLe').prop('readonly', false).removeClass('bg-light');
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã làm mới', showConfirmButton: false, timer: 1000 });
+    });
+
+    // 5. IMPORT EXCEL THÔNG MINH (Dò tìm cột theo từ khóa)
+    $('#btnImportExcel').click(() => $('#excelFile').click());
+
+    $('#excelFile').on('change', function(e) {
+        const nhId = $('#filterNH').val();
+        if (!nhId) {
+            Swal.fire('Chú ý', 'Vui lòng chọn Học kỳ trước!', 'warning');
+            $(this).val(''); return;
+        }
+
+        const file = e.target.files[0];
+        if (!file) return;
+
+        Swal.fire({ title: 'Đang xử lý...', didOpen: () => { Swal.showLoading(); } });
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                // Từ điển dò cột
+                const keywords = {
+                    ten_lop: ["tên lớp", "ten lop", "lớp", "class"],
+                    si_so: ["sỉ số", "si so", "số lượng sv"],
+                    hoc_phi_sv: ["học phí/sv", "hoc phi/sv", "học phí"],
+                    ty_le_dm: ["định mức", "dinh muc"],
+                    ty_le_hp: ["tỷ lệ % học phí", "tỷ lệ % hp"],
+                    khoan: ["khoán", "khoan"]
+                };
+
+                let colMap = { ten_lop: -1, si_so: -1, hoc_phi_sv: -1, ty_le_dm: -1, ty_le_hp: -1, khoan: -1 };
+
+                // Dò tìm index của cột
+                for (let r = 0; r < Math.min(jsonData.length, 10); r++) {
+                    const row = jsonData[r];
+                    if (!row) continue;
+                    for (let c = 0; c < row.length; c++) {
+                        const cellVal = String(row[c] || "").toLowerCase().trim();
+                        for (let key in keywords) {
+                            if (keywords[key].some(k => cellVal.includes(k)) && colMap[key] === -1) colMap[key] = c;
+                        }
+                    }
+                }
+
+                if (colMap.ten_lop === -1) {
+                    Swal.fire('Lỗi', 'Không tìm thấy cột Tên lớp!', 'error');
+                    return;
+                }
+
+                const finalData = [];
+                jsonData.forEach((row, idx) => {
+                    const tenLop = String(row[colMap.ten_lop] || "").trim();
+                    // Loại bỏ dòng tiêu đề và dòng rỗng
+                    if (tenLop && !keywords.ten_lop.some(k => tenLop.toLowerCase() === k)) {
+                        finalData.push({
+                            "TÊN LỚP": tenLop,
+                            "SỈ SỐ": row[colMap.si_so] || 0,
+                            "Học phí/SV": row[colMap.hoc_phi_sv] || 0,
+                            "Tỷ lệ % định mức": row[colMap.ty_le_dm] || 0,
+                            "Tỷ lệ % Học phí": row[colMap.ty_le_hp] || 0,
+                            "Khoán vật tư": row[colMap.khoan] || 0
+                        });
+                    }
+                });
+
+                $.ajax({
+                    url: '/lop-hoc/import-excel',
+                    method: 'POST',
+                    data: JSON.stringify({ data: finalData, nam_hoc_id: nhId }),
+                    contentType: 'application/json',
+                    success: function(res) {
+                        Swal.fire('Thông báo', res.message.replace(/\n/g, '<br>'), res.success ? 'success' : 'info')
+                        .then(() => location.reload());
+                    }
+                });
+            } catch (err) {
+                Swal.fire('Lỗi', 'Không đọc được file!', 'error');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+        $(this).val('');
+    });
+
+    // 6. XÓA DỮ LIỆU ĐANG LỌC
+    $('#btnDeleteFilter').click(function() {
+        const nhId = $('#filterNH').val();
+        if(!nhId) return Swal.fire('Chú ý', 'Hãy chọn Học kỳ!', 'warning');
+
+        Swal.fire({
+            title: 'Xác nhận xóa?',
+            text: "Xóa toàn bộ lớp trong học kỳ này!",
+            icon: 'warning', showCancelButton: true, confirmButtonText: 'Xóa ngay'
+        }).then((res) => {
+            if (res.isConfirmed) {
+                $.post('/lop-hoc/delete-filtered', { nam_hoc_id: nhId }, () => location.reload());
+            }
+        });
+    });
+
+    // 7. THÊM MỚI BẰNG AJAX
+    $('#mainForm').on('submit', function(e) {
+        e.preventDefault();
+        $.post('/lop-hoc/add', $(this).serialize(), function(res) {
+            if(res.success) Swal.fire('Thành công', res.message, 'success').then(() => location.reload());
+            else Swal.fire('Lỗi', res.message, 'error');
+        });
+    });
+});
+// Sự kiện click vào hàng (tr) để điền dữ liệu lên Form
+$('#tableLopHoc tbody').on('click', 'tr', function(e) {
+    if ($(e.target).closest('button, a, input').length) return;
+
+    const btnEdit = $(this).find('.btn-edit');
+    if (!btnEdit.length) return;
+
+    // Lấy dữ liệu
+    const id = btnEdit.data('id');
+    const ten = btnEdit.data('ten');
+    const nh = btnEdit.data('nh');
+    const siso = btnEdit.data('siso');
+    
+    // Xử lý làm tròn số để mất đuôi .00
+    const hocphi = Math.round(parseFloat(btnEdit.data('hocphi')) || 0);
+    const tyle = btnEdit.data('tyle');
+    const khoan = Math.round(parseFloat(btnEdit.data('khoan')) || 0);
+
+    // Đổ dữ liệu lên các ô nhập
+    $('input[name="ten_lop"]').val(ten);
+    $('select[name="nam_hoc_id"]').val(nh);
+    $('input[name="si_so"]').val(siso);
+    
+    // Gán giá trị đã làm tròn
+    $('#inputHocPhi').val(hocphi);
+    $('#inputTyLe').val(tyle);
+    $('#inputKhoan').val(khoan);
+
+    // Kích hoạt logic tự động khóa ô (Readonly)
+    $('#inputKhoan, #inputHocPhi').trigger('input');
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+});
+</script>
+<%- include('../partials/footer') %>

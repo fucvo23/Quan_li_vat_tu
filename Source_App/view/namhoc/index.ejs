@@ -1,0 +1,114 @@
+<%- include('../partials/header') %>
+
+<style>
+
+    .col-action-border {
+        border-left: 1px solid #dee2e6 !important;
+        width: 200px; /* Cố định độ rộng để 2 nút nằm ngang đẹp hơn */
+    }
+
+</style>
+
+<div class="container-fluid px-4">
+    <div class="card mb-4 shadow-sm mt-3">
+        <div class="card-body">
+            <form id="mainForm" action="/nam-hoc/add" method="POST">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold">Năm học</label>
+                        <input type="text" name="nam_hoc" class="form-control" placeholder="Ví dụ: 2024-2025" required>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold">Học kỳ</label>
+                        <input type="text" name="hoc_ky" class="form-control" placeholder="Ví dụ: Học kỳ 1" required>
+                    </div>
+                    
+                    <div class="col-12 mt-3 text-start">
+                        <button type="submit" class="btn btn-primary px-4 me-2"> Thêm mới</button>
+                        <button type="reset" class="btn btn-outline-danger px-4">Xóa tất cả</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm p-3">
+        <table id="tableNamHoc" class="table table-bordered bg-white align-middle text-center">
+            <thead class="table-header-custom text-center table-danger text-white">
+                <tr class="table-danger text-white">
+                    <th>Năm học</th>
+                    <th>Học kỳ</th>
+                    <th class="col-action-border">Chức năng</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% data.forEach(item => { %>
+                <tr class="row-selectable" 
+                    data-nam_hoc="<%= item.nam_hoc %>" 
+                    data-hoc_ky="<%= item.hoc_ky %>">
+                    <td><%= item.nam_hoc %></td>
+                    <td><%= item.hoc_ky %></td>
+                    <td class="col-action-border">
+                        <div class="d-flex justify-content-center gap-1">
+                            <button class="btn btn-outline-primary btn-sm" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#editModal"
+                                    data-id="<%= item.id %>"
+                                    data-val1="<%= item.nam_hoc %>"
+                                    data-val2="<%= item.hoc_ky %>">
+                                <i class="fa fa-edit"></i>
+                            </button>
+                            <a href="/nam-hoc/delete/<%= item.id %>" class="btn btn-outline-danger btn-sm" onclick="return confirm('Xóa năm học này?')">
+                                <i class="fa fa-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<%- include('../partials/modal_script', {
+    fields: [
+        {name: 'nam_hoc', label: 'Năm học', id: 'val1'},
+        {name: 'hoc_ky', label: 'Học kỳ', id: 'val2'}
+    ]
+}) %>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // 1. Kích hoạt phân trang tự động 10 dòng/trang
+    $('#tableNamHoc').DataTable({
+        "pageLength": 10,
+        "lengthChange": true,
+        "info": false,
+        "language": {
+            "search": "Tìm kiếm:",
+            "paginate": {
+                "next": "Sau",
+                "previous": "Trước"
+            },
+            "emptyTable": "Chưa có năm học nào trong danh sách"
+        }
+    });
+
+    // 2. Logic click hàng để đổ ngược dữ liệu lên form
+    $('#tableNamHoc tbody').on('click', 'tr', function(e) {
+        if ($(e.target).closest('button, a').length) return;
+
+        const form = document.getElementById('mainForm');
+        form.querySelector('input[name="nam_hoc"]').value = $(this).data('nam_hoc');
+        form.querySelector('input[name="hoc_ky"]').value = $(this).data('hoc_ky');
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+});
+</script>
+
+<%- include('../partials/footer') %>

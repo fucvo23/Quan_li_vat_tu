@@ -1,0 +1,101 @@
+<%- include('../partials/header') %>
+
+<style>
+
+    .col-action-border {
+        border-left: 1px solid #dee2e6 !important;
+        width: 200px; /* Cố định độ rộng để 2 nút nằm ngang đẹp hơn */
+    }
+
+</style>
+
+<div class="container-fluid px-4">
+    <div class="card mb-4 shadow-sm mt-3">
+        <div class="card-body">
+            <form id="mainForm" action="/giang-vien/add" method="POST">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Tên giảng viên</label>
+                        <input type="text" name="ho_ten" class="form-control" required>
+                    </div>
+                    <div class="col-12 mt-3 text-start">
+                        <button type="submit" class="btn btn-primary px-4 me-2">Thêm mới</button>
+                        <button type="reset" class="btn btn-outline-danger px-4">Xóa tất cả</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm p-3">
+        <table id="tableGiangVien" class="table table-bordered bg-white align-middle">
+            <thead class="table-header-custom text-center table-danger text-white">
+                <tr>
+                    <th>Họ và tên giảng viên</th>
+                    <th class="col-action-border">Chức năng</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% data.forEach((item) => { %>
+                    <tr class="row-selectable" data-ho_ten="<%= item.ho_ten %>">
+                        <td class="ps-3 "><%= item.ho_ten %></td>
+                        <td class="col-action-border">
+                            <div class="d-flex justify-content-center gap-1">
+                                <button class="btn btn-outline-primary btn-sm" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#editModal" 
+                                    data-id="<%= item.id %>" 
+                                    data-val1="<%= item.ho_ten %>">
+                                    <i class="fa fa-edit"></i>
+                                </button>
+                                <a href="/giang-vien/delete/<%= item.id %>" 
+                                   class="btn btn-outline-danger btn-sm" 
+                                   onclick="return confirm('Xóa giảng viên này?')">
+                                    <i class="fa fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<%- include('../partials/modal_script', { fields: [{name: 'ho_ten', label: 'Tên giảng viên', id: 'val1'}] }) %>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // 1. Kích hoạt phân trang 10 dòng
+    $('#tableGiangVien').DataTable({
+        "pageLength": 10,
+        "lengthChange": true,
+        "info": false,
+        "language": {
+            "search": "Tìm kiếm:",
+            "paginate": {
+                "next": "Sau",
+                "previous": "Trước"
+            },
+            "emptyTable": "Không có dữ liệu"
+        }
+    });
+
+    // 2. Logic click vào hàng để hiện dữ liệu lên form
+    $('#tableGiangVien tbody').on('click', 'tr', function(e) {
+        // Nếu click trúng nút bấm hoặc link thì không chạy logic này
+        if ($(e.target).closest('button, a').length) return;
+
+        const hoTen = $(this).data('ho_ten');
+        const form = document.getElementById('mainForm');
+        form.querySelector('[name="ho_ten"]').value = hoTen;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+});
+</script>
+
+<%- include('../partials/footer') %>

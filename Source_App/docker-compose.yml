@@ -1,0 +1,28 @@
+services:
+  db:
+    image: mariadb:10.11
+    container_name: vattu_db
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: quan_ly_vat_tu
+    ports:
+      - "3307:3306"
+    volumes:
+      # Ánh xạ ra thư mục Database_Storage nằm NGOÀI thư mục Source_App
+      - ../Database_Storage:/var/lib/mysql
+
+  app:
+    build: .
+    container_name: vattu_app
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: rootpassword 
+      DB_NAME: quan_ly_vat_tu
+      DB_PORT: 3306

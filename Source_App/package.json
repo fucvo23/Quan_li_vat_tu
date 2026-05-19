@@ -1,0 +1,29 @@
+{
+  "name": "quan_li_vat_tu",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fucvo23/Quan_li_vat_tu.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/fucvo23/Quan_li_vat_tu/issues"
+  },
+  "homepage": "https://github.com/fucvo23/Quan_li_vat_tu#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "ejs": "^5.0.2",
+    "exceljs": "^4.4.0",
+    "express": "^5.2.1",
+    "mysql2": "^3.22.3",
+    "xlsx": "^0.18.5"
+  }
+}

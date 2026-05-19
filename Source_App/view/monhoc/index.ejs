@@ -1,0 +1,110 @@
+<%- include('../partials/header') %>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+
+<style>
+
+    .col-action-border {
+        border-left: 1px solid #dee2e6 !important;
+        width: 200px; /* Cố định độ rộng để 2 nút nằm ngang đẹp hơn */
+    }
+
+</style>
+
+<div class="container-fluid px-4">
+    <div class="card mb-4 shadow-sm mt-3">
+        <div class="card-body">
+            <form id="mainForm" action="/mon-hoc/add" method="POST">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Tên môn học</label>
+                        <input type="text" name="ten_mon_hoc" class="form-control" required placeholder="Nhập tên môn học...">
+                    </div>
+                    
+                    <div class="col-12 mt-3 text-start">
+                        <button type="submit" class="btn btn-primary px-4 me-2">Thêm mới</button>
+                        <button type="reset" class="btn btn-outline-danger px-4">Xóa tất cả</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm p-3">
+        <table id="tableMonHoc" class="table table-bordered bg-white align-middle">
+            <thead class="table-header-custom text-center table-danger text-white">
+                <tr>
+                    <th>Tên môn học</th>
+                    <th class="col-action-border">Chức năng</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% data.forEach((item) => { %>
+                    <tr class="row-selectable" data-ten="<%= item.ten_mon_hoc %>">
+                        <td class="ps-3 "><%= item.ten_mon_hoc %></td>
+                        <td class="col-action-border">
+                            <div class="d-flex justify-content-center gap-1">
+                                <button class="btn btn-outline-primary btn-sm" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editModal" 
+                                        data-id="<%= item.id %>" 
+                                        data-val1="<%= item.ten_mon_hoc %>">
+                                    <i class="fa fa-edit"></i>
+                                </button>
+                                <a href="/mon-hoc/delete/<%= item.id %>" 
+                                   class="btn btn-outline-danger btn-sm" 
+                                   onclick="return confirm('Bạn có chắc chắn muốn xóa môn học này?')">
+                                    <i class="fa fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<%- include('../partials/modal_script', { 
+    fields: [{name: 'ten_mon_hoc', label: 'Tên môn học', id: 'val1'}] 
+}) %>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // 1. Kích hoạt phân trang tự động 10 dòng/trang
+    $('#tableMonHoc').DataTable({
+        "pageLength": 10,
+        "lengthChange": true,
+        "info": false,
+        "language": {
+            "search": "Tìm kiếm nhanh:",
+            "paginate": {
+                "next": "Sau",
+                "previous": "Trước"
+            },
+            "emptyTable": "Chưa có môn học nào trong danh sách"
+        }
+    });
+
+    // 2. Logic click hàng để đổ ngược dữ liệu lên form thêm
+    $('#tableMonHoc tbody').on('click', 'tr', function(e) {
+        // Tránh kích hoạt nếu click trúng nút Sửa hoặc Xóa
+        if ($(e.target).closest('button, a').length) return;
+
+        const tenMon = $(this).data('ten');
+        const form = document.getElementById('mainForm');
+        
+        if(form.querySelector('input[name="ten_mon_hoc"]')) {
+            form.querySelector('input[name="ten_mon_hoc"]').value = tenMon;
+        }
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+});
+</script>
+
+<%- include('../partials/footer') %>

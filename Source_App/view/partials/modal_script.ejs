@@ -1,0 +1,78 @@
+<div id="ejs-fields-data" data-fields='<%= typeof fields !== "undefined" ? JSON.stringify(fields) : "[]" %>' style="display: none;"></div>
+
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form id="formEdit" method="POST">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-pen-to-square me-2"></i>Cập nhật thông tin</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <% if (typeof fields !== 'undefined') { %>
+                            <% fields.forEach(field => { %>
+                                <div class="col-md-<%= field.col || '6' %>">
+                                    <label class="form-label fw-bold text-dark"><%= field.label %></label>
+                                    <% if (field.type === 'checkbox') { %>
+                                        <div class="form-check">
+                                            <input type="checkbox" name="<%= field.name %>" id="<%= field.id %>" value="1" class="form-check-input border-primary">
+                                            <label class="form-check-label">Kích hoạt</label>
+                                        </div>
+                                    <% } else if (field.type === 'textarea') { %>
+                                        <textarea name="<%= field.name %>" id="<%= field.id %>" class="form-control border-primary shadow-sm" rows="3"></textarea>
+                                    <% } else { %>
+                                        <input type="<%= field.type || 'text' %>" name="<%= field.name %>" id="<%= field.id %>" class="form-control border-primary shadow-sm">
+                                    <% } %>
+                                </div>
+                            <% }) %>
+                        <% } %>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    $(document).on('click', '[data-bs-toggle="modal"]', function() {
+        const btn = $(this);
+        const id = btn.data('id');
+        
+        // 1. Lấy dữ liệu config từ thẻ div ẩn (Cách này cực kỳ an toàn, không lo SyntaxError)
+        const fieldConfigs = $('#ejs-fields-data').data('fields');
+        
+        // 2. Cập nhật action cho form
+        // Lấy segment đầu tiên của URL (ví dụ: 'vat-tu' hoặc 'phan-bo-vat-tu')
+        const currentPath = window.location.pathname.split('/').filter(Boolean)[0];
+        $('#formEdit').attr('action', '/' + currentPath + '/update/' + id);
+
+        // 3. Điền dữ liệu vào các input
+        if (Array.isArray(fieldConfigs)) {
+            fieldConfigs.forEach((field, index) => {
+                const val = btn.data('val' + (index + 1));
+                const $el = $('#' + field.id);
+                
+                if ($el.length) {
+                    if ($el.attr('type') === 'checkbox') {
+                        $el.prop('checked', val == 1 || val == true || val == 'true');
+                    } else {
+                        $el.val(val);
+                    }
+                }
+            });
+        }
+    });
+
+    // Chống lỗi đơ màn hình khi đóng modal
+    $('#editModal').on('hidden.bs.modal', function () {
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open').css('overflow', '');
+    });
+});
+</script>

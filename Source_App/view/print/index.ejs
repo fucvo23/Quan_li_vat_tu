@@ -1,0 +1,170 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid px-4 mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3 border-bottom">
+            <div class="d-flex align-items-center">
+                <div class="bg-primary text-white p-2 rounded-3 me-3">
+                    <i class="fas fa-file-excel fa-lg"></i>
+                </div>
+                <div>
+                    <h5 class="mb-0 fw-bold text-dark">XUẤT THỐNG KÊ VẬT TƯ</h5>
+                    <small class="text-muted">Hệ thống sẽ tự động lọc lớp theo học kỳ bạn chọn</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body p-4">
+            <form id="printForm">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">1. Chọn học kỳ - Năm học</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-calendar-alt text-primary"></i></span>
+                            <select name="nam_hoc_id" id="nam_hoc_id" class="form-select border-start-0 shadow-none">
+                                <% namHocList.forEach(nh => { %>
+                                    <option value="<%= nh.id %>">Học kỳ <%= nh.hoc_ky %> - Năm học <%= nh.nam_hoc %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">2. Chọn Lớp học</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-users text-primary"></i></span>
+                            <select name="lop_id" id="lop_id" class="form-select border-start-0 shadow-none">
+                                <option value="">-- Đang tải danh sách lớp --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-5">
+                        <div class="p-3 bg-light rounded-3 border border-dashed">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-download me-2"></i>Tùy chọn xuất file:</h6>
+                            <div class="d-flex flex-wrap gap-3">
+                                <!-- Truyền event trực tiếp vào hàm để xử lý hiệu ứng nút bấm -->
+                                <button type="button" onclick="handlePrint('by-lop', event)" class="btn btn-primary px-4 py-2 shadow-sm">
+                                    <i class="fas fa-school me-2"></i> In thống kê theo lớp
+                                </button>
+
+                                <button type="button" onclick="handlePrint('by-hoc-ky-tien', event)" class="btn btn-danger px-4 py-2 shadow-sm">
+                                    <i class="fas fa-dollar-sign me-2"></i> In thống kê học kỳ (Thành tiền)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const namHocSelect = document.getElementById('nam_hoc_id');
+    const lopSelect = document.getElementById('lop_id');
+
+    // Hàm tải danh sách lớp động
+    async function loadLopTheoNamHoc(namHocId) {
+        lopSelect.innerHTML = '<option value="">-- Đang tải... --</option>';
+        try {
+            const response = await fetch(`/in-excel/get-lops/${namHocId}`);
+            const lops = await response.json();
+            lopSelect.innerHTML = '<option value="">-- Chọn lớp học --</option>';
+            lops.forEach(l => {
+                const option = document.createElement('option');
+                option.value = l.id;
+                option.textContent = l.ten_lop;
+                lopSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Lỗi:', error);
+            lopSelect.innerHTML = '<option value="">-- Lỗi tải dữ liệu --</option>';
+        }
+    }
+
+    namHocSelect.addEventListener('change', function() {
+        loadLopTheoNamHoc(this.value);
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (namHocSelect.value) loadLopTheoNamHoc(namHocSelect.value);
+    });
+
+    // Hàm xử lý xuất file đa trình duyệt (Chrome, Edge, Firefox, Linux, Windows)
+    async function handlePrint(type, e) {
+        const nhId = namHocSelect.value;
+        const lopId = lopSelect.value;
+
+        if (type === 'by-lop' && !lopId) {
+            alert("Vui lòng chọn một lớp cụ thể!");
+            return;
+        }
+
+        const url = (type === 'by-lop') 
+            ? `/in-excel/by-lop?nam_hoc_id=${nhId}&lop_id=${lopId}` 
+            : `/in-excel/by-hoc-ky-tien?nam_hoc_id=${nhId}`;
+        
+        const tenLop = (type === 'by-lop') ? lopSelect.options[lopSelect.selectedIndex].text : "";
+        const dateStr = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
+        
+        const fileName = (type === 'by-lop') 
+            ? `DuTru_${tenLop.replace(/\s+/g, '_')}.xlsx` 
+            : `Bao_Cao_Tong_Hop_${dateStr}.xlsx`;
+
+        const btn = e.currentTarget;
+        const originalContent = btn.innerHTML;
+
+        try {
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang xử lý...';
+            btn.disabled = true;
+
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Lỗi phản hồi từ server');
+            
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            
+            // CÁCH NÀY SẼ HIỆN FILE TRÊN THANH CÔNG CỤ CHROME
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = downloadUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click(); // Kích hoạt tải về
+            
+            // Dọn dẹp bộ nhớ
+            setTimeout(() => {
+                window.URL.revokeObjectURL(downloadUrl);
+                document.body.removeChild(a);
+            }, 100);
+
+        } catch (error) {
+            console.error('Lỗi xuất file:', error);
+            alert("Có lỗi xảy ra: " + error.message);
+        } finally {
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+        }
+    }
+</script>
+
+<style>
+    .border-dashed {
+        border-style: dashed !important;
+        border-width: 2px !important;
+    }
+    .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+    }
+    .btn {
+        transition: all 0.2s ease-in-out;
+    }
+    .btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        filter: brightness(1.1);
+    }
+</style>
+
+<%- include('../partials/footer') %>
